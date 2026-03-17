@@ -1,0 +1,751 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>去水印工具</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      padding: 20px;
+    }
+    
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+      background: white;
+      border-radius: 16px;
+      padding: 40px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+    }
+    
+    h1 {
+      text-align: center;
+      color: #333;
+      margin-bottom: 10px;
+    }
+    
+    .subtitle {
+      text-align: center;
+      color: #666;
+      margin-bottom: 30px;
+    }
+    
+    .step {
+      margin-bottom: 30px;
+      padding: 20px;
+      background: #f8f9fa;
+      border-radius: 12px;
+    }
+    
+    .step-title {
+      font-size: 18px;
+      font-weight: 600;
+      color: #333;
+      margin-bottom: 15px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    
+    .step-number {
+      width: 30px;
+      height: 30px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+    }
+    
+    .upload-area {
+      border: 3px dashed #667eea;
+      border-radius: 12px;
+      padding: 40px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+    
+    .upload-area:hover {
+      background: #f8f9ff;
+      border-color: #764ba2;
+    }
+    
+    .upload-area.dragover {
+      background: #f0f4ff;
+      border-color: #764ba2;
+    }
+    
+    #fileInput {
+      display: none;
+    }
+    
+    .canvas-container {
+      display: none;
+      position: relative;
+      margin: 20px 0;
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+    }
+    
+    .canvas-wrapper {
+      position: relative;
+      display: inline-block;
+      max-width: 100%;
+    }
+    
+    #imageCanvas {
+      display: block;
+      max-width: 100%;
+      height: auto;
+    }
+    
+    #maskCanvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+      cursor: crosshair;
+    }
+    
+    .brush-controls {
+      display: flex;
+      align-items: center;
+      gap: 15px;
+      margin-top: 15px;
+      padding: 15px;
+      background: #fff;
+      border-radius: 8px;
+      flex-wrap: wrap;
+    }
+    
+    .brush-size-control {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    
+    .brush-size-control label {
+      font-weight: 600;
+      color: #333;
+    }
+    
+    input[type="range"] {
+      width: 150px;
+    }
+    
+    .brush-preview {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background: rgba(255, 0, 0, 0.5);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    .brush-dot {
+      border-radius: 50%;
+      background: rgba(255, 0, 0, 0.8);
+    }
+    
+    .btn-group {
+      display: flex;
+      gap: 10px;
+    }
+    
+    .btn {
+      padding: 10px 20px;
+      border: none;
+      border-radius: 6px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    
+    .btn-primary {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+    }
+    
+    .btn-secondary {
+      background: #e0e0e0;
+      color: #333;
+    }
+    
+    .btn-danger {
+      background: #ff6b6b;
+      color: white;
+    }
+    
+    .btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    }
+    
+    .btn:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+      transform: none;
+    }
+    
+    .options {
+      margin: 20px 0;
+      padding: 20px;
+      background: #fff;
+      border-radius: 8px;
+    }
+    
+    .option-group {
+      margin-bottom: 15px;
+    }
+    
+    label {
+      display: block;
+      margin-bottom: 8px;
+      font-weight: 600;
+      color: #333;
+    }
+    
+    select, input[type="text"] {
+      width: 100%;
+      padding: 12px;
+      border: 2px solid #ddd;
+      border-radius: 6px;
+      font-size: 14px;
+    }
+    
+    select:focus, input:focus {
+      outline: none;
+      border-color: #667eea;
+    }
+    
+    .process-btn {
+      width: 100%;
+      padding: 18px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 18px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+    
+    .process-btn:hover:not(:disabled) {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4);
+    }
+    
+    .process-btn:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+    
+    .result {
+      display: none;
+      margin-top: 30px;
+      padding: 20px;
+      background: #f0fff4;
+      border-radius: 8px;
+      border: 2px solid #9ae6b4;
+    }
+    
+    .result.error {
+      background: #fff5f5;
+      border-color: #feb2b2;
+    }
+    
+    .result img {
+      max-width: 100%;
+      border-radius: 8px;
+      margin-top: 15px;
+    }
+    
+    .loading {
+      display: none;
+      text-align: center;
+      padding: 20px;
+    }
+    
+    .spinner {
+      border: 4px solid #f3f3f3;
+      border-top: 4px solid #667eea;
+      border-radius: 50%;
+      width: 50px;
+      height: 50px;
+      animation: spin 1s linear infinite;
+      margin: 0 auto 15px;
+    }
+    
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    
+    .api-config {
+      display: none;
+    }
+    
+    .tip {
+      background: #fff3cd;
+      border: 1px solid #ffc107;
+      border-radius: 6px;
+      padding: 12px;
+      margin-top: 10px;
+      font-size: 14px;
+      color: #856404;
+    }
+    
+    .comparison {
+      display: none;
+      margin-top: 20px;
+    }
+    
+    .comparison-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+    }
+    
+    .comparison-item {
+      text-align: center;
+    }
+    
+    .comparison-item h4 {
+      margin-bottom: 10px;
+      color: #333;
+    }
+    
+    .comparison-item img {
+      max-width: 100%;
+      border-radius: 8px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+    
+    @media (max-width: 600px) {
+      .comparison-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🖼️ 去水印工具</h1>
+    <p class="subtitle">上传图片 → 涂抹水印位置 → 一键去除</p>
+    
+    <!-- 步骤1: 上传图片 -->
+    <div class="step" id="step1">
+      <div class="step-title">
+        <span class="step-number">1</span>
+        上传图片
+      </div>
+      <div class="upload-area" id="uploadArea">
+        <input type="file" id="fileInput" accept="image/*">
+        <div style="font-size: 48px; margin-bottom: 15px;">📁</div>
+        <div style="font-size: 18px; font-weight: 600; margin-bottom: 10px;">点击或拖拽图片到这里</div>
+        <div style="color: #999;">支持 JPG、PNG 格式，最大 50MB</div>
+      </div>
+    </div>
+    
+    <!-- 步骤2: 涂抹水印 -->
+    <div class="step" id="step2" style="display: none;">
+      <div class="step-title">
+        <span class="step-number">2</span>
+        涂抹水印区域
+      </div>
+      
+      <div class="tip">
+        💡 <strong>提示：</strong>用鼠标在图片上涂抹，标记水印的位置。涂抹的区域会显示为红色半透明，这些区域将被去除。
+      </div>
+      
+      <div class="canvas-container" id="canvasContainer">
+        <div class="canvas-wrapper">
+          <canvas id="imageCanvas"></canvas>
+          <canvas id="maskCanvas"></canvas>
+        </div>
+      </div>
+      
+      <div class="brush-controls">
+        <div class="brush-size-control">
+          <label>画笔大小:</label>
+          <input type="range" id="brushSize" min="5" max="100" value="30">
+          <span id="brushSizeValue">30px</span>
+        </div>
+        
+        <div class="brush-preview">
+          <div class="brush-dot" id="brushDot"></div>
+        </div>
+        
+        <div class="btn-group">
+          <button class="btn btn-secondary" id="undoBtn">↩️ 撤销</button>
+          <button class="btn btn-danger" id="clearBtn">🗑️ 清除全部</button>
+        </div>
+      </div>
+    </div>
+    
+    <!-- 步骤3: 处理选项 -->
+    <div class="step" id="step3" style="display: none;">
+      <div class="step-title">
+        <span class="step-number">3</span>
+        处理选项
+      </div>
+      
+      <div class="options">
+        <div class="option-group">
+          <label>处理方式</label>
+          <select id="method">
+            <option value="opencv">OpenCV（免费、快速）</option>
+            <option value="api">第三方API（需要密钥）</option>
+            <option value="lama">LaMa模型（需要安装）</option>
+          </select>
+        </div>
+        
+        <div class="api-config" id="apiConfig">
+          <div class="option-group">
+            <label>API Provider</label>
+            <select id="apiProvider">
+              <option value="removebg">Remove.bg</option>
+            </select>
+          </div>
+          
+          <div class="option-group">
+            <label>API Key</label>
+            <input type="text" id="apiKey" placeholder="输入您的 API Key">
+          </div>
+        </div>
+      </div>
+      
+      <button class="process-btn" id="processBtn">🚀 开始处理</button>
+    </div>
+    
+    <!-- 加载中 -->
+    <div class="loading" id="loading">
+      <div class="spinner"></div>
+      <div>正在处理中...</div>
+    </div>
+    
+    <!-- 结果展示 -->
+    <div class="result" id="result">
+      <h3 id="resultTitle"></h3>
+      <div class="comparison" id="comparison">
+        <div class="comparison-grid">
+          <div class="comparison-item">
+            <h4>原图</h4>
+            <img id="originalImage" alt="原图">
+          </div>
+          <div class="comparison-item">
+            <h4>处理后</h4>
+            <img id="resultImage" alt="结果">
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <script>
+    // 自动检测当前域名
+    const API_URL = window.location.origin;
+    
+    // DOM 元素
+    const uploadArea = document.getElementById('uploadArea');
+    const fileInput = document.getElementById('fileInput');
+    const canvasContainer = document.getElementById('canvasContainer');
+    const imageCanvas = document.getElementById('imageCanvas');
+    const maskCanvas = document.getElementById('maskCanvas');
+    const brushSizeInput = document.getElementById('brushSize');
+    const brushSizeValue = document.getElementById('brushSizeValue');
+    const brushDot = document.getElementById('brushDot');
+    const undoBtn = document.getElementById('undoBtn');
+    const clearBtn = document.getElementById('clearBtn');
+    const processBtn = document.getElementById('processBtn');
+    const methodSelect = document.getElementById('method');
+    const apiConfig = document.getElementById('apiConfig');
+    const loading = document.getElementById('loading');
+    const result = document.getElementById('result');
+    const resultTitle = document.getElementById('resultTitle');
+    const resultImage = document.getElementById('resultImage');
+    const originalImage = document.getElementById('originalImage');
+    const comparison = document.getElementById('comparison');
+    
+    const step1 = document.getElementById('step1');
+    const step2 = document.getElementById('step2');
+    const step3 = document.getElementById('step3');
+    
+    // Canvas 上下文
+    const imgCtx = imageCanvas.getContext('2d');
+    const maskCtx = maskCanvas.getContext('2d');
+    
+    // 状态
+    let selectedFile = null;
+    let originalImageData = null;
+    let maskHistory = [];
+    let isDrawing = false;
+    let brushSize = 30;
+    
+    // 初始化画笔预览
+    updateBrushPreview();
+    
+    // 点击上传区域
+    uploadArea.addEventListener('click', () => fileInput.click());
+    
+    // 拖拽处理
+    uploadArea.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      uploadArea.classList.add('dragover');
+    });
+    
+    uploadArea.addEventListener('dragleave', () => {
+      uploadArea.classList.remove('dragover');
+    });
+    
+    uploadArea.addEventListener('drop', (e) => {
+      e.preventDefault();
+      uploadArea.classList.remove('dragover');
+      if (e.dataTransfer.files.length > 0) {
+        handleFile(e.dataTransfer.files[0]);
+      }
+    });
+    
+    // 文件选择
+    fileInput.addEventListener('change', (e) => {
+      if (e.target.files.length > 0) {
+        handleFile(e.target.files[0]);
+      }
+    });
+    
+    // 处理文件
+    function handleFile(file) {
+      if (!file.type.startsWith('image/')) {
+        alert('请选择图片文件');
+        return;
+      }
+      
+      selectedFile = file;
+      
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const img = new Image();
+        img.onload = () => {
+          // 设置画布尺寸
+          const maxWidth = 800;
+          const scale = Math.min(1, maxWidth / img.width);
+          const width = img.width * scale;
+          const height = img.height * scale;
+          
+          imageCanvas.width = width;
+          imageCanvas.height = height;
+          maskCanvas.width = width;
+          maskCanvas.height = height;
+          
+          // 绘制图片
+          imgCtx.drawImage(img, 0, 0, width, height);
+          originalImageData = imgCtx.getImageData(0, 0, width, height);
+          
+          // 清空 mask
+          maskCtx.clearRect(0, 0, width, height);
+          maskHistory = [];
+          
+          // 显示步骤2和3
+          step2.style.display = 'block';
+          step3.style.display = 'block';
+          canvasContainer.style.display = 'block';
+          
+          // 滚动到步骤2
+          step2.scrollIntoView({ behavior: 'smooth' });
+        };
+        img.src = e.target.result;
+      };
+      reader.readAsDataURL(file);
+    }
+    
+    // 画笔大小
+    brushSizeInput.addEventListener('input', () => {
+      brushSize = parseInt(brushSizeInput.value);
+      brushSizeValue.textContent = brushSize + 'px';
+      updateBrushPreview();
+    });
+    
+    function updateBrushPreview() {
+      const size = Math.min(brushSize, 30);
+      brushDot.style.width = size + 'px';
+      brushDot.style.height = size + 'px';
+    }
+    
+    // 绘制 mask
+    function getCanvasCoords(e) {
+      const rect = maskCanvas.getBoundingClientRect();
+      const scaleX = maskCanvas.width / rect.width;
+      const scaleY = maskCanvas.height / rect.height;
+      
+      let clientX, clientY;
+      if (e.touches) {
+        clientX = e.touches[0].clientX;
+        clientY = e.touches[0].clientY;
+      } else {
+        clientX = e.clientX;
+        clientY = e.clientY;
+      }
+      
+      return {
+        x: (clientX - rect.left) * scaleX,
+        y: (clientY - rect.top) * scaleY
+      };
+    }
+    
+    function draw(e) {
+      if (!isDrawing) return;
+      e.preventDefault();
+      
+      const coords = getCanvasCoords(e);
+      
+      maskCtx.fillStyle = 'rgba(255, 0, 0, 0.5)';
+      maskCtx.beginPath();
+      maskCtx.arc(coords.x, coords.y, brushSize / 2, 0, Math.PI * 2);
+      maskCtx.fill();
+    }
+    
+    function startDrawing(e) {
+      isDrawing = true;
+      // 保存当前状态用于撤销
+      saveMaskState();
+      draw(e);
+    }
+    
+    function stopDrawing() {
+      isDrawing = false;
+    }
+    
+    // 鼠标事件
+    maskCanvas.addEventListener('mousedown', startDrawing);
+    maskCanvas.addEventListener('mousemove', draw);
+    maskCanvas.addEventListener('mouseup', stopDrawing);
+    maskCanvas.addEventListener('mouseleave', stopDrawing);
+    
+    // 触摸事件
+    maskCanvas.addEventListener('touchstart', (e) => {
+      e.preventDefault();
+      startDrawing(e);
+    });
+    maskCanvas.addEventListener('touchmove', (e) => {
+      e.preventDefault();
+      draw(e);
+    });
+    maskCanvas.addEventListener('touchend', stopDrawing);
+    
+    // 保存 mask 状态
+    function saveMaskState() {
+      const imageData = maskCtx.getImageData(0, 0, maskCanvas.width, maskCanvas.height);
+      maskHistory.push(imageData);
+      // 限制历史记录数量
+      if (maskHistory.length > 20) {
+        maskHistory.shift();
+      }
+    }
+    
+    // 撤销
+    undoBtn.addEventListener('click', () => {
+      if (maskHistory.length > 0) {
+        const previousState = maskHistory.pop();
+        maskCtx.putImageData(previousState, 0, 0);
+      } else {
+        maskCtx.clearRect(0, 0, maskCanvas.width, maskCanvas.height);
+      }
+    });
+    
+    // 清除
+    clearBtn.addEventListener('click', () => {
+      saveMaskState();
+      maskCtx.clearRect(0, 0, maskCanvas.width, maskCanvas.height);
+    });
+    
+    // 方法选择
+    methodSelect.addEventListener('change', () => {
+      apiConfig.style.display = methodSelect.value === 'api' ? 'block' : 'none';
+    });
+    
+    // 处理按钮
+    processBtn.addEventListener('click', async () => {
+      if (!selectedFile) return;
+      
+      processBtn.disabled = true;
+      loading.style.display = 'block';
+      result.style.display = 'none';
+      
+      // 创建 mask 图片
+      const maskDataUrl = maskCanvas.toDataURL('image/png');
+      const maskBlob = await (await fetch(maskDataUrl)).blob();
+      
+      const formData = new FormData();
+      formData.append('image', selectedFile);
+      formData.append('mask', maskBlob, 'mask.png');
+      formData.append('method', methodSelect.value);
+      
+      if (methodSelect.value === 'api') {
+        const apiProvider = document.getElementById('apiProvider').value;
+        const apiKey = document.getElementById('apiKey').value;
+        formData.append('api_provider', apiProvider);
+        formData.append('api_key', apiKey);
+      }
+      
+      try {
+        // 设置 2 分钟超时
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 120000);
+        
+        const response = await fetch(`${API_URL}/remove`, {
+          method: 'POST',
+          body: formData,
+          signal: controller.signal
+        });
+        
+        clearTimeout(timeoutId);
+        
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        
+        const data = await response.json();
+        
+        if (data.success) {
+          resultTitle.textContent = '✅ 处理成功';
+          originalImage.src = URL.createObjectURL(selectedFile);
+          resultImage.src = data.image;
+          comparison.style.display = 'block';
+          result.classList.remove('error');
+        } else {
+          resultTitle.textContent = '❌ 处理失败: ' + data.error;
+          comparison.style.display = 'none';
+          result.classList.add('error');
+        }
+        
+        result.style.display = 'block';
+        result.scrollIntoView({ behavior: 'smooth' });
+        
+      } catch (error) {
+        resultTitle.textContent = '❌ 网络错误: ' + error.message;
+        comparison.style.display = 'none';
+        result.classList.add('error');
+        result.style.display = 'block';
+      }
+      
+      loading.style.display = 'none';
+      processBtn.disabled = false;
+    });
+  </script>
+</body>
+</html>
